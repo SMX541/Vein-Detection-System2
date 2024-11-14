@@ -1,54 +1,55 @@
 # import the necessary packages
-from picamera.array import PiRGBArray
-from picamera import PiCamera
-import time
 import cv2
 import numpy as np
+import subprocess
+import time
 
 def nothing(x):
     pass
-cap = cv2.VideoCapture(0)
+
+# Initialize camera with libcamera
+def capture_image():
+    # Capture an image using libcamera-still
+    subprocess.run(['libcamera-still', '-o', 'image.jpg'])
+
 # Create a window
 cv2.namedWindow('image')
 
-# create trackbars for color change
-
+# Load a predefined image
 img1 = cv2.imread('out.jpg')
-rows,cols,channels = img1.shape
+rows, cols, channels = img1.shape
 
-# initialize the camera and grab a reference to the raw camera capture
-camera = PiCamera()
-camera.resolution = (640, 480)
-camera.framerate = 32
-rawCapture = PiRGBArray(camera, size=(640, 480))
- 
+# Capture an image to start
+capture_image()
+
 # allow the camera to warmup
 time.sleep(0.1)
- 
-# capture frames from the camera
-for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-    # grab the raw NumPy array representing the image, then initialize the timestamp
-    # and occupied/unoccupied text
-    image = frame.array
-    roi = image[0:rows, 0:cols ]
-   
+
+# Read the image captured by libcamera
+image = cv2.imread('image.jpg')
+roi = image[0:rows, 0:cols]
+
+while True:
     # Display the resulting frame
-    dst = cv2.addWeighted(image,0.7,img1,0.3,0)
-    cv2.imshow("image",dst)
+    dst = cv2.addWeighted(image, 0.7, img1, 0.3, 0)
+    cv2.imshow("image", dst)
     k = cv2.waitKey(1) & 0xFF
 
     if k == ord("a"):
-            cv2.imwrite(time.strftime("Vein_Screenshot%Y%m%d%H%M%S.jpg"),dst)
-            break
-    # clear the stream in preparation for the next frame
-    rawCapture.truncate(0)
+        # Save the image with a timestamp
+        cv2.imwrite(time.strftime("Vein_Screenshot%Y%m%d%H%M%S.jpg"), dst)
+        break
 
-    # if the `q` key was pressed, break from the loop
     if k == ord("q"):
-            break
-  
+        # If 'q' is pressed, exit loop
+        break
 
-# When everything done, release the capture
-cap.release()
+    # Capture a new image for the next frame
+    capture_image()
+    image = cv2.imread('image.jpg')
+    roi = image[0:rows, 0:cols]
+
+# When everything is done, destroy all the windows
 cv2.destroyAllWindows()
+
 
